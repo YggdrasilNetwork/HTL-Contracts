@@ -1,61 +1,131 @@
-%lang starknet
+#[starknet::contract]
+mod HTLCERC20 {
+    use starknet::get_caller_address;
+    use starknet::get_block_timestamp;
+    use starknet::ContractAddress;
+    use starknet::contract_address_const;
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-// Define an interface for interacting with ERC20 contracts
-@contract_interface
-namespace ERC20 {
-    func transfer(sender: felt252, recipient: felt252, amount: Uint256) -> (success: felt252) {
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        LockFunds: LockFunds,
+        ReleaseFunds: ReleaseFunds,
+        Refund: Refund,
+        APICallTriggered: APICallTriggered,
     }
-}
 
-// Define storage variables using the storage_var attribute
-@storage_var
-func locked_amount() -> Uint256 {
-}
+    #[derive(Drop, starknet::Event)]
+    struct LockFunds {
+        sender: ContractAddress,
+        amount: u256,
+        time_lock: u64,
+    }
 
-@storage_var
-func lock_time() -> felt252 {
-}
+    #[derive(Drop, starknet::Event)]
+    struct ReleaseFunds {
+        recipient: ContractAddress,
+        amount: u256,
+        btc_recipient: felt252,
+        btc_amount: u256,
+    }
 
-// Define the event emitted when USDC is locked
-@event
-func USDC_Locked(sender: felt252, amount: Uint256, lock_time: felt252) {
-}
+    #[derive(Drop, starknet::Event)]
+    struct Refund {
+        sender: ContractAddress,
+        amount: u256,
+    }
 
-// External function to lock tokens
-@external
-func lock_tokens{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt*}(
-    erc20_address: felt252,
-    amount: Uint256
-) {
-    // Get the current block timestamp
-    let (current_time) = get_block_timestamp();
+    #[derive(Drop, starknet::Event)]
+    struct APICallTriggered {
+        btc_recipient: felt252,
+        btc_amount: u256,
+    }
 
-    // Ensure USDC tokens are locked by calling the ERC20 contract transfer function
-    let (success) = ERC20.transfer(erc20_address, contract_address, amount);
-    assert success == 1;
+    #[storage]
+    struct Storage {
+        sender: ContractAddress,
+        recipient: ContractAddress,
+        btc_recipient: felt252,
+        erc20_token: ContractAddress,
+        amount: u256,
+        time_lock: u64,
+    }
 
-    // Update locked amount and lock timestamp
-    locked_amount::write(amount);
-    lock_time::write(current_time);
+    #[constructor]
+    fn constructor(
+        ref self: ContractState,
+        recipient: ContractAddress,
+        btc_recipient: felt252,
+        erc20_token: ContractAddress,
+        amount: u256,
+        time_lock: u64,
+    ) {
+        self.sender.write(get_caller_address());
+        self.recipient.write(recipient);
+        self.btc_recipient.write(btc_recipient);
+        self.erc20_token.write(erc20_token);
+        self.amount.write(amount);
+        self.time_lock.write(get_block_timestamp() + time_lock);
+    }
 
-    // Emit event that tokens were locked
-    USDC_Locked.emit(msg_sender, amount, current_time);
-}
+    #[external(v0)]
+    fn lock_funds(ref self: ContractState) {
+        let caller = get_caller_address();
+        assert(caller == self.sender.read(), 'Only sender can call this function');
 
-// External function to withdraw locked tokens
-@external
-func withdraw_tokens{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt*}() {
-    let (current_time) = get_block_timestamp();
-    let (lock_timestamp) = lock_time::read();
+        let token = IERC20Dispatcher { contract_address: self.erc20_token.read() };
+        let amount = self.amount.read();
+        assert(token.transfer_from(caller, starknet::get_contract_address(), amount), 'Transfer failed');
 
-    // Check if the timelock period has expired (e.g., 1 hour = 3600 seconds)
-    assert current_time > (lock_timestamp + 3600);
+        self.emit(Event::LockFunds(LockFunds {
+            sender: caller,
+            amount: amount,
+            time_lock: self.time_lock.read(),
+        }));
 
-    // Transfer the locked USDC back to the sender (Alice)
-    let (amount) = locked_amount::read();
-    let (success) = ERC20.transfer(contract_address, msg_sender, amount);
-    assert success == 1;
+        self.emit(Event::APICallTriggered(APICallTriggered {
+            btc_recipient: 0,
+            btc_amount: 0,
+        }));
+    }
 
-    // Clear the locked amount after withdrawal
-    locked_amount::write(Uint256(0, 0));
+    #[external(v0)]
+    fn release_funds(ref self: ContractState, btc_amount: u256) {
+        let caller = get_caller_address();
+        assert(caller == self.recipient.read(), 'Only recipient can call this function');
+        assert(get_block_timestamp() >= self.time_lock.read(), 'Timelock not expired');
+
+        let token = IERC20Dispatcher { contract_address: self.erc20_token.read() };
+        let amount = self.amount.read();
+        assert(token.transfer(self.recipient.read(), amount), 'Transfer failed');
+
+        self.emit(Event::ReleaseFunds(ReleaseFunds {
+            recipient: self.recipient.read(),
+            amount: amount,
+            btc_recipient: self.btc_recipient.read(),
+            btc_amount: btc_amount,
+        }));
+
+        self.emit(Event::APICallTriggered(APICallTriggered {
+            btc_recipient: self.btc_recipient.read(),
+            btc_amount: btc_amount,
+        }));
+    }
+
+    #[external(v0)]
+    fn refund(ref self: ContractState) {
+        let caller = get_caller_address();
+        assert(caller == self.sender.read(), 'Only sender can call this function');
+        assert(get_block_timestamp() >= self.time_lock.read(), 'Timelock not expired');
+
+        let token = IERC20Dispatcher { contract_address: self.erc20_token.read() };
+        let amount = self.amount.read();
+        assert(token.transfer(self.sender.read(), amount), 'Refund failed');
+
+        self.emit(Event::Refund(Refund {
+            sender: self.sender.read(),
+            amount: amount,
+        }));
+    }
 }
