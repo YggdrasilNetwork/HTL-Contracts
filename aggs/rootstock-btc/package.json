@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "express": "^4.21.0",
     "viem": "^2.21.10"
   }
 }
