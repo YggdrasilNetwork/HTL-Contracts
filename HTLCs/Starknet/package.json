@@ -1,0 +1,21 @@
+{
+  "name": "starknet_htlc",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@shardlabs/starknet-hardhat-plugin": "^0.8.0-alpha.5",
+    "hardhat": "^2.22.11"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "starknet": "^6.11.0",
+    "web3": "^4.13.0"
+  }
+}

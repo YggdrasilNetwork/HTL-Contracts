@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "target": "ES2015",                     // Target modern JavaScript
+      "module": "commonjs",                    // Use CommonJS modules
+      "lib": ["ES2015", "DOM"],                // Include modern ECMAScript features
+      "strict": true,                          // Enable strict type checking
+      "esModuleInterop": true,                 // Required for default imports from CommonJS modules
+      "skipLibCheck": true,                    // Skip checking third-party type declarations
+      "outDir": "./build",                     // Output directory for compiled JS
+      "baseUrl": "./",                         // Base URL for resolving modules
+      "resolveJsonModule": true                // Allows importing JSON files
+    },
+    "include": ["src/**/*"],                   // Include all TypeScript files in the src folder
+    "exclude": ["node_modules"]                // Exclude node_modules
+  }
+  

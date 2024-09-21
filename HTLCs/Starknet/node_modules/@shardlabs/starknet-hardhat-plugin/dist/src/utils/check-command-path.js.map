@@ -1,0 +1,1 @@
+{"version":3,"file":"check-command-path.js","sourceRoot":"","sources":["../../../src/utils/check-command-path.ts"],"names":[],"mappings":";;;;;;AAAA,oEAA+D;AAC/D,4CAAoB;AAEpB,SAAgB,gBAAgB,CAAC,WAAmB;IAChD,IAAI,CAAC,YAAE,CAAC,UAAU,CAAC,WAAW,CAAC,EAAE;QAC7B,MAAM,IAAI,2CAAmB,CAAC,WAAW,WAAW,aAAa,CAAC,CAAC;KACtE;AACL,CAAC;AAJD,4CAIC"}
