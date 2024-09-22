@@ -7,16 +7,17 @@ const rl = readline.createInterface({
 });
 
 // Available options for chains and tokens
-const chains = ['Rootstock', 'Flow', 'StarkNet'];
+const chains = ['Rootstock', 'Flow', 'StarkNet', "Bitcoin"];
 const tokens = {
   'Rootstock': ['RBTC', 'ETH', 'USDC', 'YGN'],
   'Flow': ['FLOW', 'USDC', 'ETH', 'YGN'],
-  'StarkNet': ['ETH', 'USDC', 'LINK', 'YGN']
+  'StarkNet': ['ETH', 'USDC', 'LINK', 'YGN'],
+  "Bitcoin": ["Native-BTC"]
 };
 
 // Function to get user input and run the aggregator
 function runCLI() {
-  rl.question('Select Source Chain (Rootstock, Flow, StarkNet): ', (sourceChain) => {
+  rl.question('Select Source Chain (Rootstock, Flow, StarkNet, Bitcoin): ', (sourceChain) => {
     if (!chains.includes(sourceChain)) {
       console.log('Invalid chain selection.');
       rl.close();
@@ -30,7 +31,7 @@ function runCLI() {
         return;
       }
 
-      rl.question('Select Destination Chain (Rootstock, Flow, StarkNet): ', (destinationChain) => {
+      rl.question('Select Destination Chain (Rootstock, Flow, StarkNet, Bitcoin): ', (destinationChain) => {
         if (!chains.includes(destinationChain)) {
           console.log('Invalid chain selection.');
           rl.close();
